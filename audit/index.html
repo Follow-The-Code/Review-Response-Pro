@@ -1,0 +1,377 @@
+<title>The Software ROI Auditor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Layout: one centered column, five stacked steps, dark by deliberate choice to match the Master Your Multiple blue-to-teal brand. */
+  :root {
+    --bg: #0a0a0b;
+    --surface: #101012;
+    --surface-2: #141416;
+    --line: rgba(255, 255, 255, 0.1);
+    --fg: #e5e7eb;
+    --muted: #9ca3af;
+    --accent: #00a3ff;
+    --accent-2: #00e5c3;
+    --font-display: 'Sora', 'Helvetica Neue', Arial, sans-serif;
+    --font-body: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: dark;
+  }
+  html { background: var(--bg); }
+  body { background: var(--bg); color: var(--fg); font-family: var(--font-body); }
+  .font-display { font-family: var(--font-display); }
+  .glow-blue { box-shadow: 0 0 40px -10px rgba(0, 163, 255, 0.55); }
+  .text-gradient { background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .bg-gradient-accent { background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+  .chip-in { animation: chipIn .25s ease-out; }
+  @keyframes chipIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input[type=number] { -moz-appearance: textfield; }
+  button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  @media (prefers-reduced-motion: reduce) {
+    .chip-in { animation: none; }
+    * { transition: none !important; }
+  }
+</style>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.26.2/babel.min.js"></script>
+
+<div id="root"></div>
+
+<script type="text/babel">
+  const { useState, useMemo } = React;
+
+  const AUDIT_EMAIL = "jeremy@masteryourmultiple.com";
+  const AVG_COMMISSION = 9000;
+  const AVG_WASTE = 3500;
+
+  const PRESET_TOOLS = [
+    { name: "Follow Up Boss", cost: 149 },
+    { name: "Canva Pro", cost: 15 },
+    { name: "ReminderMedia", cost: 199 },
+    { name: "Zillow Premier Agent", cost: 500 },
+    { name: "GoHighLevel", cost: 97 },
+    { name: "DocuSign", cost: 25 },
+    { name: "Mailchimp", cost: 20 },
+    { name: "Linktree", cost: 10 },
+    { name: "BoomTown", cost: 1000 },
+  ];
+
+  let _id = 0;
+  const nextId = () => ++_id;
+
+  const money = (n) =>
+    n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
+  function Header() {
+    return (
+      <header className="text-center pt-16 pb-12 sm:pt-24 sm:pb-16">
+        <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-gray-400 mb-8">
+          <span className="h-2 w-2 rounded-full bg-gradient-accent"></span>
+          The Software ROI Auditor
+        </div>
+        <h1 className="font-display text-5xl sm:text-7xl font-extrabold tracking-tight text-white leading-[1.05]" style={{ textWrap: "balance" }}>
+          Are You Bleeding <span className="text-gradient">Commission?</span>
+        </h1>
+        <p className="mt-6 mx-auto max-w-2xl text-lg sm:text-xl text-gray-400 leading-relaxed">
+          The average Realtor wastes <span className="text-white font-semibold">$3,500/year</span> on overlapping software. Map your tech stack below to find your profit leaks.
+        </p>
+      </header>
+    );
+  }
+
+  function SectionLabel({ step, title, subtitle }) {
+    return (
+      <div className="mb-5">
+        <div className="flex items-center gap-3">
+          <span className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-accent text-xs font-black text-black">{step}</span>
+          <h2 className="font-display text-xl sm:text-2xl font-bold text-white tracking-tight">{title}</h2>
+        </div>
+        {subtitle && <p className="mt-2 text-sm text-gray-500">{subtitle}</p>}
+      </div>
+    );
+  }
+
+  function QuickAdd({ tools, onAddPreset, onAddCustom }) {
+    const [name, setName] = useState("");
+    const [cost, setCost] = useState("");
+    const [error, setError] = useState("");
+
+    const added = new Set(tools.map((t) => t.name.toLowerCase()));
+
+    const submit = (e) => {
+      e.preventDefault();
+      const trimmed = name.trim();
+      const amount = parseFloat(cost);
+      if (!trimmed) return setError("Enter the name of the tool.");
+      if (isNaN(amount) || amount < 0) return setError("Enter a valid monthly cost.");
+      setError("");
+      onAddCustom(trimmed, amount);
+      setName("");
+      setCost("");
+    };
+
+    return (
+      <section className="mb-14">
+        <SectionLabel step="1" title="Quick-Add Your Subscriptions" subtitle="Tap every tool you pay for. Prices are estimated monthly costs." />
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {PRESET_TOOLS.map((tool) => {
+            const isAdded = added.has(tool.name.toLowerCase());
+            return (
+              <button
+                key={tool.name}
+                onClick={() => !isAdded && onAddPreset(tool)}
+                disabled={isAdded}
+                className={
+                  "group min-w-0 text-left rounded-xl border px-4 py-3.5 transition-all duration-150 " +
+                  (isAdded
+                    ? "border-[#00a3ff]/50 bg-[#00a3ff]/10 cursor-default"
+                    : "border-white/10 bg-[#141416] hover:border-[#00a3ff] hover:bg-[#00a3ff]/5 hover:-translate-y-0.5 active:translate-y-0")
+                }
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className={"min-w-0 font-semibold text-sm sm:text-base " + (isAdded ? "text-white" : "text-gray-200")}>{tool.name}</span>
+                  <span className={"shrink-0 text-xs font-bold " + (isAdded ? "text-[#00e5c3]" : "text-gray-500 group-hover:text-[#00a3ff]")}>
+                    {isAdded ? "✓ ADDED" : "+ ADD"}
+                  </span>
+                </div>
+                <div className="mt-1 text-sm text-gray-500 tabular-nums">{money(tool.cost)}/mo</div>
+              </button>
+            );
+          })}
+        </div>
+
+        <form onSubmit={submit} className="mt-6 rounded-xl border border-white/10 bg-[#101012] p-4 sm:p-5">
+          <div className="text-sm font-semibold text-gray-300 mb-3">Not listed? Add a custom tool</div>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <input
+              id="tool-name"
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Name of tool"
+              className="min-w-0 flex-1 rounded-lg border border-white/10 bg-[#0a0a0b] px-4 py-2.5 text-white placeholder-gray-500 outline-none focus:border-[#00a3ff] focus:ring-1 focus:ring-[#00a3ff]"
+            />
+            <div className="relative sm:w-44">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+              <input
+                id="tool-cost"
+                type="number"
+                min="0"
+                step="any"
+                value={cost}
+                onChange={(e) => setCost(e.target.value)}
+                placeholder="Monthly cost"
+                className="w-full rounded-lg border border-white/10 bg-[#0a0a0b] pl-8 pr-4 py-2.5 text-white placeholder-gray-500 outline-none focus:border-[#00a3ff] focus:ring-1 focus:ring-[#00a3ff]"
+              />
+            </div>
+            <button
+              type="submit"
+              className="rounded-lg bg-white/10 hover:bg-[#00a3ff] hover:text-black px-6 py-2.5 font-semibold text-white transition-colors"
+            >
+              Add Tool
+            </button>
+          </div>
+          {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
+        </form>
+      </section>
+    );
+  }
+
+  function RunningList({ tools, onRemove }) {
+    return (
+      <section className="mb-14">
+        <SectionLabel step="2" title="Your Tech Stack" subtitle={tools.length ? `${tools.length} subscription${tools.length === 1 ? "" : "s"} mapped` : null} />
+
+        {tools.length === 0 ? (
+          <div className="rounded-xl border border-dashed border-white/15 px-6 py-12 text-center">
+            <div className="text-gray-400 font-medium">Your stack is empty.</div>
+            <div className="mt-1 text-sm text-gray-500">Tap the tools above to start finding your leaks.</div>
+          </div>
+        ) : (
+          <ul className="divide-y divide-white/5 overflow-hidden rounded-xl border border-white/10 bg-[#101012]">
+            {tools.map((tool) => (
+              <li key={tool.id} className="chip-in flex items-center justify-between gap-4 px-5 py-4">
+                <div className="min-w-0">
+                  <div className="truncate font-semibold text-white">{tool.name}</div>
+                  <div className="text-sm text-gray-500 tabular-nums">{money(tool.cost * 12)}/year</div>
+                </div>
+                <div className="flex items-center gap-4 shrink-0">
+                  <span className="font-bold text-white tabular-nums">{money(tool.cost)}<span className="text-gray-500 font-medium text-sm">/mo</span></span>
+                  <button
+                    onClick={() => onRemove(tool.id)}
+                    className="rounded-md border border-white/10 px-3 py-1.5 text-xs font-semibold text-gray-400 hover:border-red-500/60 hover:text-red-400 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    );
+  }
+
+  function StatCard({ label, value, sub, highlight }) {
+    return (
+      <div
+        className={
+          "min-w-0 rounded-2xl p-6 border " +
+          (highlight
+            ? "border-[#00a3ff]/60 bg-gradient-to-br from-[#00a3ff]/15 to-[#00e5c3]/5 glow-blue"
+            : "border-white/10 bg-[#101012]")
+        }
+      >
+        <div className="text-xs font-semibold uppercase tracking-widest text-gray-500">{label}</div>
+        <div className={"font-display mt-3 text-4xl sm:text-5xl font-extrabold tabular-nums tracking-tight " + (highlight ? "text-gradient" : "text-white")}>{value}</div>
+        {sub && <div className="mt-2 text-sm text-gray-500">{sub}</div>}
+      </div>
+    );
+  }
+
+  function Dashboard({ monthly, annual, deals, count }) {
+    const over = annual - AVG_WASTE;
+    return (
+      <section className="mb-14">
+        <SectionLabel step="3" title="Your Burn Rate" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <StatCard label="Total Monthly Spend" value={money(monthly)} sub="Every month, before a single deal closes" />
+          <StatCard label="Total Annual Spend" value={money(annual)} sub="Monthly × 12" />
+          <StatCard
+            label="Deals Needed to Break Even"
+            value={deals.toFixed(1)}
+            sub={`Based on ${money(AVG_COMMISSION)} avg. gross commission`}
+            highlight
+          />
+        </div>
+        {count > 0 && (
+          <p className="mt-4 text-sm text-gray-500">
+            {over > 0
+              ? <>Your stack runs <span className="text-white font-semibold">{money(over)}</span> above the $3,500 the average Realtor wastes. That's a lot of closings just to cover software.</>
+              : <>Your stack is under the $3,500 average waste figure. There may still be overlap worth finding.</>}
+          </p>
+        )}
+      </section>
+    );
+  }
+
+  function CopyButton({ text, label, onFail }) {
+    const [done, setDone] = useState(false);
+    const copy = async () => {
+      try {
+        await navigator.clipboard.writeText(text);
+        setDone(true);
+        setTimeout(() => setDone(false), 2000);
+      } catch (e) {
+        if (onFail) onFail();
+      }
+    };
+    return (
+      <button
+        type="button"
+        onClick={copy}
+        className="rounded-lg border border-white/15 px-4 py-2 text-sm font-semibold text-gray-200 hover:border-[#00a3ff] hover:text-white transition-colors"
+      >
+        {done ? "Copied" : label}
+      </button>
+    );
+  }
+
+  function CTA({ tools, monthly, annual, deals }) {
+    const [showSummary, setShowSummary] = useState(false);
+    const subject = "Tech Stack Audit Request";
+    const lines = [
+      "Hi Jeremy,",
+      "",
+      "I'd like to claim one of your free Tech Stack Audits.",
+    ];
+    if (tools.length) {
+      lines.push("", "My current stack:");
+      tools.forEach((t) => lines.push(`- ${t.name}: ${money(t.cost)}/mo`));
+      lines.push("", `Monthly: ${money(monthly)} | Annual: ${money(annual)} | Deals to break even: ${deals.toFixed(1)}`);
+    }
+    lines.push("", "Thanks!");
+    const body = lines.join("\n");
+    const href = `mailto:${AUDIT_EMAIL}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+
+    return (
+      <section className="mb-16">
+        <div className="rounded-3xl bg-gradient-accent p-[2px] glow-blue">
+          <div className="rounded-[22px] bg-[#0d0d10] px-6 py-10 sm:px-12 sm:py-14 text-center">
+            <div className="inline-block rounded-full bg-[#00e5c3]/10 border border-[#00e5c3]/30 px-4 py-1 text-xs font-bold uppercase tracking-widest text-[#00e5c3] mb-6">
+              Limited: 5 spots this week
+            </div>
+            <p className="font-display mx-auto max-w-2xl text-xl sm:text-2xl font-semibold text-white leading-snug" style={{ textWrap: "balance" }}>
+              I am doing <span className="text-gradient font-extrabold">5 FREE</span> custom Tech Stack Audits this week. I will review your stack, find your redundancies, and map your true ROI in 20 minutes.
+            </p>
+            <a
+              href={href}
+              className="mt-8 inline-block rounded-xl bg-gradient-accent px-10 py-4 text-lg font-extrabold text-black transition-transform hover:scale-[1.03] active:scale-100"
+            >
+              Claim Your Free Audit
+            </a>
+
+            <div className="mt-6 text-sm text-gray-500">
+              If your email app doesn't open, send your request to{" "}
+              <span className="select-all font-semibold text-gray-200">{AUDIT_EMAIL}</span>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-3">
+              <CopyButton text={AUDIT_EMAIL} label="Copy email address" />
+              {tools.length > 0 && (
+                <CopyButton text={body} label="Copy my stack summary" onFail={() => setShowSummary(true)} />
+              )}
+            </div>
+            {showSummary && (
+              <textarea
+                id="stack-summary"
+                readOnly
+                value={body}
+                rows={Math.min(14, lines.length + 1)}
+                onFocus={(e) => e.target.select()}
+                className="mt-4 w-full rounded-lg border border-white/10 bg-[#0a0a0b] p-3 text-left text-sm text-gray-300"
+              />
+            )}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  function App() {
+    const [tools, setTools] = useState([]);
+
+    const addPreset = (tool) =>
+      setTools((prev) => [...prev, { id: nextId(), name: tool.name, cost: tool.cost }]);
+    const addCustom = (name, cost) =>
+      setTools((prev) => [...prev, { id: nextId(), name, cost }]);
+    const remove = (id) => setTools((prev) => prev.filter((t) => t.id !== id));
+
+    const { monthly, annual, deals } = useMemo(() => {
+      const m = tools.reduce((sum, t) => sum + t.cost, 0);
+      const a = m * 12;
+      return { monthly: m, annual: a, deals: a / AVG_COMMISSION };
+    }, [tools]);
+
+    return (
+      <div className="min-h-screen">
+        <div className="pointer-events-none fixed inset-x-0 top-0 h-[480px] bg-[radial-gradient(ellipse_at_top,rgba(0,163,255,0.14),transparent_65%)]"></div>
+        <main className="relative mx-auto max-w-3xl px-5 sm:px-8">
+          <Header />
+          <QuickAdd tools={tools} onAddPreset={addPreset} onAddCustom={addCustom} />
+          <RunningList tools={tools} onRemove={remove} />
+          <Dashboard monthly={monthly} annual={annual} deals={deals} count={tools.length} />
+          <CTA tools={tools} monthly={monthly} annual={annual} deals={deals} />
+          <footer className="border-t border-white/5 py-10 text-center text-sm text-gray-500">
+            Presented by <span className="font-semibold text-gray-300">Master Your Multiple</span> · Digital Marketing for Local Businesses
+          </footer>
+        </main>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
